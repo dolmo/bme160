@@ -1,6 +1,15 @@
 # Name: David Olmo Marchal
 
 class ProteinParam :
+    """
+    In this class we create a protein object that has multiple methods to analyze its composition and the different chemical properties it has
+        -We count the amount of valid amino acids
+        -Make a dictionary of the different amino acids with amount values attached
+        -We calcualte the net charge of the protein at a certain pH
+        -We calculate what theoritical pH would make our protein have a charge closest to 0.0
+        -Calculate other misc chemical properties like molar extinction, mass extinction and molecular weight
+    
+    """
 # These tables are for calculating:
 #     molecular weight (aa2mw), along with the mol. weight of H2O (mwH2O)
 #     absorbance at 280 nm (aa2abs280)
@@ -28,7 +37,8 @@ class ProteinParam :
     aaCterm = 2.34
 
     def __init__ (self, protein):
-        #Initializing the different instance variables we will be using throughout the class
+        
+        """Initializing the different instance variables we will be using throughout the class"""
         self.protein = protein
         self.aa2mw = ProteinParam.aa2mw
         self.pkaPos = ProteinParam.aa2chargePos
@@ -38,6 +48,7 @@ class ProteinParam :
         self.proteincomposition = {aa: protein.count(aa) for aa in self.aa2mw.keys()}
     #here we count the number of valid amino acids in our protein and remove invalid amino acids
     def aaCount (self):
+        """Gets the count of total valid amnino acids in the protein"""
         #looping through the protein string
         for item in self.protein:
             #checking if its invalid or not, if its not in the keys for our amino acid molecular weight then its not a valid amino acid
@@ -48,7 +59,7 @@ class ProteinParam :
     
 
     def aaComposition (self) :
-        #simply returns the composition we made earlier in the __init__ method
+        """simply returns the composition we made earlier in the __init__ method"""
         return self.proteincomposition
 
     def _charge_ (self,pH):
@@ -73,9 +84,10 @@ class ProteinParam :
         netCharge = positive-negative
         return netCharge
 
-    #for this class I had tried doing binary search but I had a lot problems with it so I switched to a linear approach
+    
     def pI (self):
-        #In this class we calculate theoritical pH needed to get a net charge around 0.0
+        """In this method we calculate theoritical pH needed to get a net charge around 0.0
+            for this method I had tried doing binary search but I had a lot problems with it so I switched to a linear approach """
         pH=0.0
         nearest0 = float('inf')
         bestpH = 0.0
@@ -90,14 +102,11 @@ class ProteinParam :
                 #updates the bestpH variable everytime we get a new closer pH
                 bestpH = pH
             #up our pH by 0.1 everytime
-            pH += 0.1
+            pH += 0.01
         return bestpH
             
-            
-        
-    
     def molarExtinction (self):
-        #in this class we calculate the molar extinctionc coefficient
+        """in this method  we calculate the molar extinction coefficient by looping through our protein composition and following the formula given"""
         me = 0.0
         #looping through our protein composition dictionary again
         for key,value in self.proteincomposition.items():
@@ -108,12 +117,12 @@ class ProteinParam :
         return me
 
     def massExtinction (self):
-        #not written by me but it calculates massExtinction by calling molecularWeight method.
+        """not written by me but it calculates massExtinction by calling molecularWeight method."""
         myMW =  self.molecularWeight()
         return self.molarExtinction() / myMW if myMW else 0.0
 
     def molecularWeight (self):
-        # In this class we calculate the molecular weight of the counted amino acids 
+        """In this method we calculate the molecular weight of the counted amino acids """
 
         mw = 0.0
         #Looping through the dictionary based on keys and values 
