@@ -63,6 +63,7 @@ class ProteinParam :
         return self.proteincomposition
 
     def _charge_ (self,pH):
+        """In this method we calculate the charge of the protein depending on a given pH by the pI method or just a certain pH inputted"""
         #Defining important variables for calculation
         positive = 0.0
         negative = 0.0
