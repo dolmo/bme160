@@ -73,29 +73,42 @@ class ProteinParam :
         netCharge = positive-negative
         return netCharge
 
+    #for this class I had tried doing binary search but I had a lot problems with it so I switched to a linear approach
     def pI (self):
+        #In this class we calculate theoritical pH needed to get a net charge around 0.0
         pH=0.0
         nearest0 = float('inf')
         bestpH = 0.0
+        #Looping through the 0-14 pH range
         while pH <=14.0:
+            #calling the charge method given the current pH index
             charge = self._charge_(pH)
+            #checking if the current charge is less than the previous lowest charge
             if abs(charge) < nearest0:
+                # we use abs because netcharge can mean a negative charge and could mess up the comparisons
                 nearest0 = abs(charge)
+                #updates the bestpH variable everytime we get a new closer pH
                 bestpH = pH
+            #up our pH by 0.1 everytime
             pH += 0.1
         return bestpH
             
             
         
-            
+    
     def molarExtinction (self):
+        #in this class we calculate the molar extinctionc coefficient
         me = 0.0
+        #looping through our protein composition dictionary again
         for key,value in self.proteincomposition.items():
+            #check for amount of the 3 specific amino acids
             if value > 0 and key in self.aa2abs280.keys():
+                #calculation
                 me += value *(self.aa2abs280.get(key))
         return me
 
     def massExtinction (self):
+        #not written by me but it calculates massExtinction by calling molecularWeight method.
         myMW =  self.molecularWeight()
         return self.molarExtinction() / myMW if myMW else 0.0
 
