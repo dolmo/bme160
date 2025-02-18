@@ -1,3 +1,4 @@
+from FastAreader import FastAreader
 class NucParams:
     #Name: David Olmo Marchal
 
@@ -117,24 +118,30 @@ class OrfFinder:
         self.starts = starts
         self.stops = stops
         self.orfDict = {}
-        print("This is the normal sequence: %s"%sequence)
+        #print("This is the normal sequence: %s"%sequence)
         #We need to find the complement, so we need to translate bases
         complementmap = str.maketrans('ACGT', 'TGCA')
         self.complement = sequence.translate(complementmap)
-        print("This is the complement sequence: %s"%self.complement)
+        #print("This is the complement sequence: %s"%self.complement)
         # turning it into a list so we can use reverse method
         complementlist = list(self.complement)
         complementlist.reverse()
         self.revcomplement = "".join(complementlist)
-        print("This is the reverse complement sequence: %s"%self.revcomplement)
+        #print("This is the reverse complement sequence: %s"%self.revcomplement)
         self.frames = {
-          '+1':self.frameShift(sequence,1),
-          '+2':self.frameShift(sequence,2),
-          '+3':self.frameShift(sequence,3)
+          '+1':self.frameShift(self.sequence,1),
+          '+2':self.frameShift(self.sequence,2),
+          '+3':self.frameShift(self.sequence,3),
+          '-1':self.frameShift(self.revcomplement,1),
+          '-2':self.frameShift(self.revcomplement,2),
+          '-3':self.frameShift(self.revcomplement,3)
         }
-        print("This is the frame +1 : %s"%self.frames.get("+1"))
-        print("This is the frame +2 : %s"%self.frames.get("+2"))
-        print("This is the frame +3 : %s"%self.frames.get("+3"))
+        #print("This is the frame +1 : %s"%self.frames.get("+1"))
+        #print("This is the frame +2 : %s"%self.frames.get("+2"))
+        #print("This is the frame +3 : %s"%self.frames.get("+3"))
+        #print("This is the frame -1 : %s"%self.frames.get("-1"))
+        #print("This is the frame -2 : %s"%self.frames.get("-2"))
+        #print("This is the frame -3 : %s"%self.frames.get("-3"))
 
     def frameShift(self,sequence,frame):
         '''This helper function changes the frame of the given sequence
@@ -151,35 +158,36 @@ class OrfFinder:
         return  (codon in self.starts)
     def isStop(self,codon):
         return (codon in self.stops)
-    def orfFinder(self, frame):
+    def orfFinder(self, frame,mG = 0):
         '''Start codons are ATG|GTG|CTG|TTG 
             Stop codons are TAG|TAA|TGA '''
         # there will be a dictionaries filled with ORF objects which 
         # we will be easily be able to access, sorted by length
         #lists that handle the positions of start and stop codons
-        startPos = []
-        stopPos = []
         # gets the specific frame sequence from dictionaries
         frameSeq = self.frames.get(frame)
-        for i in range(0,len(frameSeq),3):
+        for i in range(0,len(frameSeq)-2,3):
             #loops through each odon and then checks to see if its start or stop
             codon = frameSeq[i:i+3]
             if self.isStart(codon):
-                startPos.append(i)
-                print("start codon: %s at %d"%(codon,i))
-            elif self.isStop(codon):
-                #if a stop codon append it to the list
-                stopPos.append(i)
-                print("stop codon: %s at %d"%(codon,i))
-        #Links Start and stop codons together to get a ORF
-        for start in startPos:
-            for stop in stopPos:
-                if start <=stop and (stop-start)>= 75:
-                    #creates a ORF object and adds it to our dictionaries of ORFs read
-                    nameOrf= "ORF "+ str(len(self.orfDict)+1)
-                    length = stop-start +3
-                    orf = ORF(start,stop,frame,length)
-                    self.orfDict[nameOrf] = orf
+                startPos = i
+                #print("start codon: %s at %d"%(codon,i))
+                for j in range(i, len(frameSeq)-2,3):
+                    stop_codon = frameSeq[j:j+3]
+                    if self.isStop(stop_codon):
+                        #if a stop codon append it to the list
+                        stopPos = j
+                        length = stopPos-startPos +3
+                        #print("stop codon: %s at %d"%(codon,i))
+                        #creates a ORF object and adds it to our dictionaries of ORFs read
+                        if(length>=mG):
+                            nameOrf= "ORF "+ str(len(self.orfDict)+1)
+                            orf = ORF(startPos,stopPos,frame,length)
+                            self.orfDict[nameOrf] = orf
+                        break
+                else:
+                    pass
+        return self.orfDict
         
             
         
@@ -188,7 +196,7 @@ class OrfFinder:
 
 def main():
 
-    orf = OrfFinder("""TTGAACCCGTACGGTCTCCCACACGCCCCTCATGATGGCTGTTGCTCATTGCCTAAATTT
+    '''orf = OrfFinder("""TTGAACCCGTACGGTCTCCCACACGCCCCTCATGATGGCTGTTGCTCATTGCCTAAATTT
                     TCGTACTCTAAGTGGTACTTAAATGGGGCATTTAGCTTAATTTCAAGTTCAAGCTTGGGG
                     TTGCCATACTTCCCTATCTCATCTGTCTCCCTTATTATAATCTTATTTATGAGCAATTGT
                     AAATGTGCATTAGATATTTCATTTCCCTCAATTATGCCATCTAACACCTCTATACTCTTT
@@ -204,10 +212,27 @@ def main():
                     AACTCAAATGTATCATTGTCGATTATTGGTTCAAAGAAATCTTTATGAACTATATGTTCT
                     GACTCGTCAATATTTCTTCTTCCACCTTTAATCATTGTTCTTTGAGTTTTACCACATCTT
                     AATATGCCGATATACACATCATTGGTCAGTATTCTCTTTACGCTCGTTTCAAACCATAGA
-                    TGTGCGTAAGTATCACTTGGCTTCATGCTTCTACTAAATCTTTCTCTCTTTACTGTAGCT""")
-    orf.orfFinder("+1")
-    for key,value in orf.orfDict.items():
-        print("%s: Strand: %s Frame: %s Start %d Stop %d Length(nt|aa) %d | %d"%(key, value.strand, value.frame, value.startPos, value.stopPos, value.length, (value.length/3)))
+                    TGTGCGTAAGTATCACTTGGCTTCATGCTTCTACTAAATCTTTCTCTCTTTACTGTAGCT""")'''
+    myReader = FastAreader('lab5test.fa') 
+    for head, seq in myReader.readFasta() :
+        print(head)
+        orftest= OrfFinder(seq)
+        orftest.orfFinder("+1")
+        orftest.orfFinder("+2")
+        orftest.orfFinder("+3")
+        orftest.orfFinder("-1")
+        orftest.orfFinder("-2")
+        orftest.orfFinder("-3")
+        if orftest.orfDict == {}:
+            print("No ORFs found")
+        else:
+            for key,value in orftest.orfDict.items():
+                print("%s: Strand: %s Frame: %s Start %d Stop %d Length(nt|aa) %d | %d"%(key, value.strand, value.frame, value.startPos, value.stopPos, value.length, (value.length/3)))
+        
+
+    #orf.orfFinder("+1")
+    #for key,value in orf.orfDict.items():
+        #print("%s: Strand: %s Frame: %s Start %d Stop %d Length(nt|aa) %d | %d"%(key, value.strand, value.frame, value.startPos, value.stopPos, value.length, (value.length/3)))
 
 if __name__ == "__main__":
     main()
