@@ -25,7 +25,12 @@
 3. Now that you have two strands you need to look at the different frames
 4. There are 3 Frames for each strand (forward and reverse complement), you need to just move up by +1 nucleotide for a diff frame shift. Ex ATGCCTTAGGCTGA, Frame +1 → ATG CCT TAG GCT GA, Frame +2 → TGC CTT AGG CTG A, Frame +3 → GCC TTA GGC TGA., you do this with reverse aswell.
 5. Now we find the start and end codons, and begin the search for specific ORFs.
-6. Im going to make an ORF class, which will contain different attributes of ORFs, like start/stop codon location, length of said ORF, just so it will be easy to sort later as we will have objects that already have everything we need.
+6. Test cases 
+    - Start and Stop found (implemented)
+    - No Start but Stop found (not implemented)
+    - Start but no Stop Found
+    - 
+7. Im going to make an ORF class, which will contain different attributes of ORFs, like start/stop codon location, length of said ORF, just so it will be easy to sort later as we will have objects that already have everything we need.
 
 # Things to think about
 1. We can take into account a minimum gene size, for example 100 nucleotides (counts start and stop codon so 94 coding Nuc and 6 start/stop nuc)
