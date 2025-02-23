@@ -1,4 +1,5 @@
 from FastAreader import FastAreader
+from collections import OrderedDict
 class NucParams:
     #Name: David Olmo Marchal
 
@@ -107,6 +108,14 @@ class ORF:
         self.strand = frame[0]
         self.length = length
         self.sequence =sequence
+    def __eq__(self, other):
+        if not isinstance(other, ORF):
+            return False
+        return (self.startPos, self.stopPos, self.frame, self.length, self.sequence) == \
+               (other.startPos, other.stopPos, other.frame, other.length, other.sequence)
+
+    def __hash__(self):
+        return hash((self.startPos, self.stopPos, self.frame, self.length, self.sequence))
 
 
 class OrfFinder:
@@ -162,8 +171,12 @@ class OrfFinder:
         return (codon in self.stops)
     def sortOrfs(self):
         orfs = list(self.orfDict.items())
-        orfs.sort(key=lambda x: (x[1].length), reverse=True)
-        self.orfDict = dict(orfs)
+        orfs.sort(key=lambda x: (-x[1].length, x[1].startPos,x[1].frame))  # Sort by length (desc), then startPos (asc)
+        self.orfDict = OrderedDict(orfs)
+    def remove_duplicate_orfs(self):
+        unique_orfs = set(self.orfDict.values()) 
+        new_orf_dict = {i: orf for i, orf in enumerate(unique_orfs)} 
+        self.orfDict = new_orf_dict
     def orfFinder(self, frame,mG = 0):
         '''Start codons are ATG|GTG|CTG|TTG 
             Stop codons are TAG|TAA|TGA '''
@@ -175,21 +188,11 @@ class OrfFinder:
         frameSeq = self.frames.get(frame)
         beginning = True
         foundStartorStop = False
-        """for starts in self.starts:
-            if starts in frameSeq:
-                foundStartorStop =True
-        for stops in self.stops:
-            if stops in frameSeq:
-                foundStartorStop = True
-        print(foundStartorStop)"""
-        count = 0
         for i in range(0,len(frameSeq)-2,3):
             #loops through each odon and then checks to see if its start or stop
             codon = frameSeq[i:i+3]
             #boundary condition
-            count+=1
-            if self.isStop(codon) and beginning:
-                print(str(count) + " stop first")
+            if self.isStop(codon) and beginning == True:
                 # This is the test case for when we find a stop codon in the beginning but no start codon
                 # This means that we have an ORF from the start of the sequence until that stop codon (assume start is upstream)
                 stopPos = i+3
@@ -204,15 +207,13 @@ class OrfFinder:
                     nameOrf= "ORF "+ str(len(self.orfDict)+1)
                     orf = ORF(1,length,frame,length,seq)
                     self.orfDict[nameOrf] = orf
-                    #print(0.5)
-                    beginning = False
                     foundStartorStop = True
+                beginning = False
             
             if self.isStart(codon):
                 #beginning = False
                 #This is for finding ORFs in the middle of the sequence, just like ur average ORF finder, so no boundary conditions
                 startPos = i
-                #print("start codon: %s at %d"%(codon,i))
                 for j in range(i, len(frameSeq)-2,3):
                     stop_codon = frameSeq[j:j+3]
                     if self.isStop(stop_codon):
@@ -220,48 +221,28 @@ class OrfFinder:
                         stopPos = j+3
                         seq = frameSeq[startPos:stopPos]
                         length = len(seq)
-                        #print("stop codon: %s at %d"%(codon,i))
                         #creates a ORF object and adds it to our dictionaries of ORFs read
                         if(length>=mG):
                             nameOrf= "ORF "+ str(len(self.orfDict)+1)
                             orf = ORF(startPos+1,stopPos,frame,length,seq)      #fix this later might be hard coded
                             self.orfDict[nameOrf] = orf
                             foundStartorStop = True
-                            print(str(count) +" start and stop")
-                            #print(1)
                             break
-            if foundStartorStop != True:
-                #This is the boundary condition if u find zero start or zero stop codons
-                if frame[0] == "+":
-                    boundarySeq = self.frames.get("+1")
-                else:
-                    boundarySeq = self.frames.get("-1")
-                length = len(boundarySeq)
-                if(length>=mG):
-                    nameOrf= "ORF "+ str(len(self.orfDict)+1)
-                    orf = ORF(1,length,frame,length,boundarySeq)
-                    self.orfDict[nameOrf] = orf
-                    foundStartorStop = True
-                    print(str(count) + " no stop and stop")
-                    #print(0)
+        if foundStartorStop != True:
+            #This is the boundary condition if u find zero start or zero stop codons
+            if frame[0] == "+":
+                boundarySeq = self.frames.get("+1")
+            else:
+                boundarySeq = self.frames.get("-1")
+            length = len(boundarySeq)
+            if(length>=mG):
+                nameOrf= "ORF "+ str(len(self.orfDict)+1)
+                orf = ORF(1,length,frame,length,boundarySeq)
+                self.orfDict[nameOrf] = orf
+                foundStartorStop = True
+                beginning = False
             
         return self.orfDict
-        
-'''if i == 0 and len(frameSeq) > 3:
-                partialStop = len(frameSeq)  
-                partialLength = partialStop
-                if partialLength >= mG:
-                    nameOrf = "ORF " + str(len(self.orfDict) + 1)
-                    if (frame[0]== "-"):
-                        seq = self.frames.get("-1")
-                        print(1)
-                        orf = ORF(0, partialStop, frame, partialLength, seq[:partialStop])
-                    else:
-                        seq = self.frames.get("+1")
-                        print(1)
-                        orf = ORF(0, partialStop, frame, partialLength, seq[:partialStop])
-                    self.orfDict[nameOrf] = orf'''            
-        
 
 def main():
 
@@ -275,7 +256,10 @@ def main():
         orf.orfFinder("-1")
         orf.orfFinder("-2")
         orf.orfFinder("-3")
+        orf.remove_duplicate_orfs()
         orf.sortOrfs()
+
+        
         for orf_name, orf in orf.orfDict.items():
             print(f"{orf.frame:<4} {orf.startPos:>3}..{orf.stopPos:>3} {orf.length:>4} {orf.sequence}")
         
